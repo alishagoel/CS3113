@@ -283,8 +283,8 @@ bool walls(glm::vec3 &position)
 
 bool walls_balls(glm::vec3 &position)
 {
-    float height = 5.0f;
-    float wall = height - 0.2f * scaling_amount.y;
+    float height = 5.2f;
+    float wall = height - 0.2f * scaling_amount_teddy.y;
     if (position.y <= -wall or position.y >= wall)
     { return true; }
     else { return false; }
