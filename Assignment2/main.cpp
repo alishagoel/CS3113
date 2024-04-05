@@ -61,8 +61,10 @@ bool g_game_is_running = true;
 
 bool multiplayer_mode = true;
 
+bool ball2, ball3 = false;
+
 ShaderProgram g_shader_program;
-glm::mat4 view_matrix, g_matrix_teddy, g_matrix_haystack1, g_matrix_haystack2, g_projection_matrix, g_trans_matrix;
+glm::mat4 view_matrix, g_matrix_teddy, g_matrix_teddy2, g_matrix_teddy3, g_matrix_haystack1, g_matrix_haystack2, g_projection_matrix, g_trans_matrix;
 
 float g_previous_ticks = 0.0f;
 //float scaling_amount = 2.0f;
@@ -76,7 +78,8 @@ GLuint g_teddy_texture_id;
 
 // movement tracker
 glm::vec3 g_player_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
-glm::vec3 g_player_movement = glm::vec3(0.0f, 0.0f, 0.0f);     //
+glm::vec3 g_player_movement = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 g_auto_movement = glm::vec3(0.0f, 1.0f, 0.0f);//
                                                                //
 float g_player_speed = 5.0f;
 
@@ -85,7 +88,15 @@ glm::vec3 g_player_movement2 = glm::vec3(0.0f, 0.0f, 0.0f);
 
 glm::vec3 g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
 float g_ball_speed = 3.0f;
-glm::vec3 g_movement_ball = glm::vec3(0.3f, 0.4f, 0.0f);
+glm::vec3 g_movement_ball = glm::vec3(-0.2f, 0.4f, 0.0f);
+
+glm::vec3 g_ball_position2 = glm::vec3(0.0f, 0.0f, 0.0f);     //
+glm::vec3 g_movement_ball2 = glm::vec3(-0.2f, 0.4f, 0.0f);
+
+glm::vec3 g_ball_position3 = glm::vec3(0.0f, 0.0f, 0.0f);     //
+glm::vec3 g_movement_ball3 = glm::vec3(-0.2f, 0.4f, 0.0f);
+
+
                                                                //
 
 float get_screen_to_ortho(float coordinate, Coordinate axis)
@@ -224,6 +235,23 @@ void process_input()
                     
                     case SDLK_t:
                         multiplayer_mode = !multiplayer_mode;
+                        break;
+                        
+                    case SDLK_1:
+                        ball2 = false;
+                        ball3 = false;
+                        break;
+                    
+                    case SDLK_2:
+                        ball3 = false;
+                        ball2 = true;
+                        break;
+                        
+                    case SDLK_3:
+                        ball2 = true;
+                        ball3 = true;
+                        break;
+                        
                                                                              //
                     default:                                                 //
                         break;                                               //
@@ -256,7 +284,7 @@ void process_input()
     {                                                                        //
         g_player_movement.y = -1.0f;                                         //
     } //
-                                                                             //
+    
     // This makes sure that the player can't "cheat" their way into moving   //
     // faster                                                                //
     if (glm::length(g_player_movement) > 1.0f)                               //
@@ -274,7 +302,7 @@ void process_input()
 
 bool walls(glm::vec3 &position)
 {
-    float height = 1.8f;
+    float height = 3.3f;
     float wall = height - 0.2f * scaling_amount.y;
     if (position.y <= -wall or position.y >= wall)
     { return true; }
@@ -283,9 +311,18 @@ bool walls(glm::vec3 &position)
 
 bool walls_balls(glm::vec3 &position)
 {
-    float height = 5.2f;
+    float height = 3.5f;
     float wall = height - 0.2f * scaling_amount_teddy.y;
     if (position.y <= -wall or position.y >= wall)
+    { return true; }
+    else { return false; }
+}
+
+bool ball_final(glm::vec3 &position)
+{
+    float height = 4.8f;
+    float wall = height - 0.2f * scaling_amount_teddy.x;
+    if (position.x <= -wall or position.x >= wall)
     { return true; }
     else { return false; }
 }
@@ -294,11 +331,12 @@ bool collide(glm::vec3 &position_a, glm::vec3 &position_b)
 {
     float x_distance = fabs(position_a.x - position_b.x) - ((scaling_amount.x + scaling_amount_teddy.x) / 2.0f);
     float y_distance = fabs(position_a.y - position_b.y) - ((scaling_amount.y + scaling_amount_teddy.y) / 2.0f);
-    
-    if (x_distance <= 0 && y_distance <= 0)
-    { return true; }
+    if (x_distance <= 0.0 && y_distance <= 0.0)
+    {LOG("collide");
+        return true; }
     else { return false; }
 }
+
 
 
 void update()
@@ -307,15 +345,18 @@ void update()
     float delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
     g_previous_ticks = ticks;
 
-    // Add             direction       * elapsed time * units per second
     g_matrix_teddy= glm::mat4(1.0f);
+    if (ball2){
+        g_matrix_teddy2= glm::mat4(1.0f);}
+    if (ball3){
+        g_matrix_teddy3= glm::mat4(1.0f);}
+    
     g_matrix_haystack1 = glm::mat4(1.0f);
     g_matrix_haystack2 =glm::mat4(1.0f);
-    g_matrix_haystack1 = glm::scale(g_matrix_haystack1, glm::vec3(scaling_amount.x, scaling_amount.y, 1.0f));
-    g_matrix_haystack2 = glm::scale(g_matrix_haystack2, glm::vec3(scaling_amount.x, scaling_amount.y, 1.0f));
-    g_matrix_teddy = glm::scale(g_matrix_teddy, glm::vec3(scaling_amount_teddy.x, scaling_amount_teddy.y, 1.0f));
-    g_matrix_haystack1 = glm::translate(g_matrix_haystack1, glm::vec3(2.3f, 0.0f, 0.0f));
-    g_matrix_haystack2 = glm::translate(g_matrix_haystack2, glm::vec3(-2.3f, 0.0f, 0.0f));
+    
+    
+    g_matrix_haystack1 = glm::translate(g_matrix_haystack1, glm::vec3(5.0f, 0.0f, 0.0f));
+    g_matrix_haystack2 = glm::translate(g_matrix_haystack2, glm::vec3(-5.0f, 0.0f, 0.0f));
     g_player_position += g_player_movement * g_player_speed * delta_time;
     g_player_position2 += g_player_movement2 * g_player_speed * delta_time;
     
@@ -324,6 +365,8 @@ void update()
     g_matrix_haystack2 = glm::translate(g_matrix_haystack2, g_player_position);
     g_matrix_haystack2 = glm::rotate(g_matrix_haystack2, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     
+    
+    
     if (walls(g_player_position)){
         g_player_position -= g_player_movement * g_player_speed * delta_time;
     }
@@ -331,11 +374,22 @@ void update()
     if (walls(g_player_position2)){
         g_player_position2 -= g_player_movement2 * g_player_speed * delta_time;
         
-        
+    }
+    
+    if(!multiplayer_mode){
+        if (walls(g_player_position)){
+            g_player_position -= g_auto_movement * g_player_speed * delta_time;
+            g_auto_movement.y = -g_auto_movement.y;
+        }
+        g_player_position += g_auto_movement * g_player_speed * delta_time;
+    }
+    
+    if (ball_final(g_ball_position) || ball_final(g_ball_position2) || ball_final(g_ball_position3)){
+        g_game_is_running=false;
     }
     
     g_ball_position += g_movement_ball * g_ball_speed * delta_time;
-    
+
     if (collide(g_ball_position, g_player_position) ||
         collide(g_ball_position, g_player_position2))
             {
@@ -352,7 +406,51 @@ void update()
 
     g_matrix_teddy = glm::translate(g_matrix_teddy, g_ball_position);
     
+    if (ball2){
+        g_ball_position2 += g_movement_ball2 * g_ball_speed * delta_time;
 
+        if (collide(g_ball_position2, g_player_position) ||
+            collide(g_ball_position2, g_player_position2))
+                {
+                    g_ball_position2 -= g_movement_ball2 * g_ball_speed * delta_time;
+                    g_movement_ball2.x = -g_movement_ball2.x;
+                    g_ball_position2 += g_movement_ball2 * g_ball_speed * delta_time;
+                }
+        else if (walls_balls(g_ball_position2))
+                {
+                    g_ball_position2 -= g_movement_ball2 * g_ball_speed * delta_time;
+                    g_movement_ball2.y = -g_movement_ball2.y;
+                    g_ball_position2 += g_movement_ball2 * g_ball_speed * delta_time;
+                }
+
+        g_matrix_teddy2 = glm::translate(g_matrix_teddy2, g_ball_position2);
+        g_matrix_teddy2 = glm::scale(g_matrix_teddy2, glm::vec3(scaling_amount_teddy.x, scaling_amount_teddy.y, 1.0f));
+    }
+    
+    if (ball3){
+            g_ball_position3 += g_movement_ball3 * g_ball_speed * delta_time;
+
+            if (collide(g_ball_position3, g_player_position) ||
+                collide(g_ball_position3, g_player_position2))
+            {
+                g_ball_position3 -= g_movement_ball3 * g_ball_speed * delta_time;
+                g_movement_ball3.x = -g_movement_ball3.x;
+                g_ball_position3 += g_movement_ball3 * g_ball_speed * delta_time;
+            }
+            else if (walls_balls(g_ball_position3))
+            {
+                g_ball_position3 -= g_movement_ball3 * g_ball_speed * delta_time;
+                g_movement_ball3.y = -g_movement_ball3.y;
+                g_ball_position3 += g_movement_ball3 * g_ball_speed * delta_time;
+            }
+
+            g_matrix_teddy3 = glm::translate(g_matrix_teddy3, g_ball_position3);
+            g_matrix_teddy3 = glm::scale(g_matrix_teddy3, glm::vec3(scaling_amount_teddy.x, scaling_amount_teddy.y, 1.0f));
+        }
+    
+    g_matrix_haystack1 = glm::scale(g_matrix_haystack1, glm::vec3(scaling_amount.x, scaling_amount.y, 1.0f));
+    g_matrix_haystack2 = glm::scale(g_matrix_haystack2, glm::vec3(scaling_amount.x, scaling_amount.y, 1.0f));
+    g_matrix_teddy = glm::scale(g_matrix_teddy, glm::vec3(scaling_amount_teddy.x, scaling_amount_teddy.y, 1.0f));
     
     
 }
@@ -391,6 +489,14 @@ void render() {
     draw_object(g_matrix_haystack1, g_haystack_texture_id);
     
     draw_object(g_matrix_haystack2, g_haystack_texture_id);
+    
+    if (ball2){
+        draw_object(g_matrix_teddy2, g_teddy_texture_id);
+    }
+    
+    if (ball3){
+        draw_object(g_matrix_teddy3, g_teddy_texture_id);
+    }
     
     // We disable two attribute arrays now
     glDisableVertexAttribArray(g_shader_program.get_position_attribute());
