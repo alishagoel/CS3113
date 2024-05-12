@@ -33,9 +33,9 @@ enum Coordinate
 const int WINDOW_WIDTH = 640 * 2,
           WINDOW_HEIGHT = 480 * 2;
 
-const float BG_RED = 0.1922f,
-            BG_BLUE = 0.7008f,
-            BG_GREEN = 0.9500f,
+const float BG_RED = 0.0f,
+            BG_BLUE = 0.0f,
+            BG_GREEN = 0.0f,
             BG_OPACITY = 1.0f;
 
 const int VIEWPORT_X = 0,
@@ -55,6 +55,8 @@ const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
 
 const char HAYSTACK_SPRITE_FILEPATH[] = "haystack.png";
 const char TEDDY_SPRIRE_FILEPATH[] = "teddy.png";
+const char END1_SPRIRE_FILEPATH[] = "end1.png";
+const char END2_SPRIRE_FILEPATH[] = "end2.png";
 
 SDL_Window* g_display_window;
 bool g_game_is_running = true;
@@ -64,7 +66,7 @@ bool multiplayer_mode = true;
 bool ball2, ball3 = false;
 
 ShaderProgram g_shader_program;
-glm::mat4 view_matrix, g_matrix_teddy, g_matrix_teddy2, g_matrix_teddy3, g_matrix_haystack1, g_matrix_haystack2, g_projection_matrix, g_trans_matrix;
+glm::mat4 view_matrix, g_matrix_teddy, g_matrix_teddy2, g_matrix_teddy3, g_matrix_haystack1, g_matrix_haystack2, g_matrix_end1, g_matrix_end2, g_projection_matrix, g_trans_matrix;
 
 float g_previous_ticks = 0.0f;
 //float scaling_amount = 2.0f;
@@ -75,19 +77,23 @@ scaling_amount_teddy = glm::vec3(0.7f, 0.7f, 1.0f);
 
 GLuint g_haystack_texture_id;
 GLuint g_teddy_texture_id;
+GLuint g_end1_texture_id;
+GLuint g_end2_texture_id;
+
+int winner = 0;
 
 // movement tracker
-glm::vec3 g_player_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
+glm::vec3 g_player_position = glm::vec3(-5.0f, 0.0f, 0.0f);     //
 glm::vec3 g_player_movement = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 g_auto_movement = glm::vec3(0.0f, 1.0f, 0.0f);//
                                                                //
 float g_player_speed = 5.0f;
 
-glm::vec3 g_player_position2 = glm::vec3(0.0f, 0.0f, 0.0f);     //
+glm::vec3 g_player_position2 = glm::vec3(5.0f, 0.0f, 0.0f);     //
 glm::vec3 g_player_movement2 = glm::vec3(0.0f, 0.0f, 0.0f);
+float g_ball_speed = 8.0f;
 
-glm::vec3 g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);     //
-float g_ball_speed = 3.0f;
+glm::vec3 g_ball_position = glm::vec3(1.0f, 3.5f, 0.0f);     //
 glm::vec3 g_movement_ball = glm::vec3(-0.2f, 0.4f, 0.0f);
 
 glm::vec3 g_ball_position2 = glm::vec3(0.0f, 0.0f, 0.0f);     //
@@ -164,6 +170,8 @@ void initialise()
     g_matrix_teddy = glm::mat4(1.0f);
     g_matrix_haystack1 = glm::mat4(1.0f);
     g_matrix_haystack2 = glm::mat4(1.0f);
+    g_matrix_end1 = glm::mat4(1.0f);
+    g_matrix_end2 = glm::mat4(1.0f);
     view_matrix = glm::mat4(1.0f);  // Defines the position (location and orientation) of the camera
     g_projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);  // Defines the characteristics of your camera, such as clip planes, field of view, projection method etc.
     
@@ -177,6 +185,9 @@ void initialise()
     
     g_haystack_texture_id = load_texture(HAYSTACK_SPRITE_FILEPATH);
     g_teddy_texture_id = load_texture(TEDDY_SPRIRE_FILEPATH);
+    g_teddy_texture_id = load_texture(TEDDY_SPRIRE_FILEPATH);
+    g_end1_texture_id = load_texture(END1_SPRIRE_FILEPATH);
+    g_end2_texture_id = load_texture(END2_SPRIRE_FILEPATH);
     
     // enable blending
     glEnable(GL_BLEND);
@@ -323,7 +334,8 @@ bool ball_final(glm::vec3 &position)
     float height = 4.8f;
     float wall = height - 0.2f * scaling_amount_teddy.x;
     if (position.x <= -wall or position.x >= wall)
-    { return true; }
+    {   winner = position.x < 0 ? 2 : 1;
+        return true; }
     else { return false; }
 }
 
@@ -344,6 +356,7 @@ void update()
     float ticks = (float) SDL_GetTicks() / MILLISECONDS_IN_SECOND; // get the current number of ticks
     float delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
     g_previous_ticks = ticks;
+    
 
     g_matrix_teddy= glm::mat4(1.0f);
     if (ball2){
@@ -355,8 +368,9 @@ void update()
     g_matrix_haystack2 =glm::mat4(1.0f);
     
     
-    g_matrix_haystack1 = glm::translate(g_matrix_haystack1, glm::vec3(5.0f, 0.0f, 0.0f));
-    g_matrix_haystack2 = glm::translate(g_matrix_haystack2, glm::vec3(-5.0f, 0.0f, 0.0f));
+    
+    
+    
     g_player_position += g_player_movement * g_player_speed * delta_time;
     g_player_position2 += g_player_movement2 * g_player_speed * delta_time;
     
@@ -405,6 +419,7 @@ void update()
             }
 
     g_matrix_teddy = glm::translate(g_matrix_teddy, g_ball_position);
+    g_matrix_teddy = glm::scale(g_matrix_teddy, glm::vec3(scaling_amount_teddy.x, scaling_amount_teddy.y, 1.0f));
     
     if (ball2){
         g_ball_position2 += g_movement_ball2 * g_ball_speed * delta_time;
@@ -450,7 +465,6 @@ void update()
     
     g_matrix_haystack1 = glm::scale(g_matrix_haystack1, glm::vec3(scaling_amount.x, scaling_amount.y, 1.0f));
     g_matrix_haystack2 = glm::scale(g_matrix_haystack2, glm::vec3(scaling_amount.x, scaling_amount.y, 1.0f));
-    g_matrix_teddy = glm::scale(g_matrix_teddy, glm::vec3(scaling_amount_teddy.x, scaling_amount_teddy.y, 1.0f));
     
     
 }
@@ -477,6 +491,7 @@ void render() {
         0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // triangle 2
     };
     
+    
     glVertexAttribPointer(g_shader_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
     glEnableVertexAttribArray(g_shader_program.get_position_attribute());
     
@@ -484,11 +499,20 @@ void render() {
     glEnableVertexAttribArray(g_shader_program.get_tex_coordinate_attribute());
     
     // Bind texture
-    draw_object(g_matrix_teddy, g_teddy_texture_id);
     
+    if(!g_game_is_running){
+        if (winner==1){
+            draw_object(g_matrix_end1, g_end1_texture_id);
+        }else{
+            draw_object(g_matrix_end2, g_end2_texture_id);
+        }
+    }
     draw_object(g_matrix_haystack1, g_haystack_texture_id);
     
     draw_object(g_matrix_haystack2, g_haystack_texture_id);
+    
+    draw_object(g_matrix_teddy, g_teddy_texture_id);
+    
     
     if (ball2){
         draw_object(g_matrix_teddy2, g_teddy_texture_id);
@@ -507,7 +531,6 @@ void render() {
 
 void shutdown()
 {
-    
     SDL_Quit();
 }
 
@@ -525,6 +548,8 @@ int main(int argc, char* argv[])
         render();
     }
     
-    shutdown();
+    while(!g_game_is_running){
+        render();
+    }
     return 0;
 }
